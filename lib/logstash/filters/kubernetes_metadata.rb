@@ -30,7 +30,7 @@ class LogStash::Filters::KubernetesMetadata < LogStash::Filters::Base
   public
   def register
     @logger.debug("Registering Kubernetes Filter plugin")
-    self.lookup_cache ||= LruRedux::ThreadSafeCache.new(1000,  900)
+    self.lookup_cache ||= LruRedux::ThreadSafeCache.new(1000, 900)
     @logger.debug("Created cache...")
   end
 
@@ -42,9 +42,6 @@ class LogStash::Filters::KubernetesMetadata < LogStash::Filters::Base
     @logger.debug("event is: #{event}")
     path = event.get(@source)
 
-    @logger.debug("@source is: #{@source}")
-    @logger.debug("path is: #{path}")
-
     # Ensure that the path parameter has been defined so that we can find the required metadata
     if (path.nil? || path.empty?)
       event.tag("_kubeparsefailure")
@@ -53,27 +50,36 @@ class LogStash::Filters::KubernetesMetadata < LogStash::Filters::Base
 
     @logger.debug("Log entry has source field, beginning processing for Kubernetes")
 
-    config = {}
+    metadata = {}
+    cached_metadata = lookup_cache[path]
+    file_metadata = get_file_info(path)
 
-    unless config = lookup_cache[path]
-      kubernetes = get_file_info(path)
+    # If we were unable to extract metadata from the file name, return
+    return unless file_metadata
 
-      return unless kubernetes
+    if cached_metadata
+      metadata = file_metadata.merge(cached_metadata)
+    else
+      @logger.debug("Trying to get kubernetes file info, it was not cached");
+      @logger.debug("kubernetes file info got: #{metadata}")
 
-      pod = kubernetes['pod']
-      namespace = kubernetes['namespace']
-      name = kubernetes['container_name']
+      pod = file_metadata['pod']
+      namespace = file_metadata['namespace']
+      name = file_metadata['container_name']
 
       return unless pod and namespace and name
 
-      metadata = kubernetes
-
       if data = get_kubernetes(namespace, pod)
-        metadata.merge!(data)
+        metadata = file_metadata.merge(data)
         set_log_formats(metadata)
         lookup_cache[path] = metadata
       end
+      @logger.debug("metadata within lookup_cache[path]: #{metadata}")
     end
+
+
+    @logger.debug("metadata after unless lookup_cache[path] is: #{metadata}")
+    @logger.debug("config after unless lookup_cache[path] is: #{config}")
 
     event.set(@target, metadata)
     return filter_matched(event)
@@ -174,14 +180,16 @@ class LogStash::Filters::KubernetesMetadata < LogStash::Filters::Base
         response = RestClient::Resource.new(url, rest_opts).get
       rescue RestClient::ResourceNotFound
         @logger.warn("Kubernetes returned an error while querying the API")
+        @logger.warn("url: #{url}, rest_opts: #{rest_opts}")
       rescue Exception => e
         @logger.warn("Error while querying the API: #{e.to_s}")
       end
 
       if response && response.code != 200
         @logger.warn("Non 200 response code returned: #{response.code}")
-        return nil
       end
+
+      @logger.debug("response was: #{response}")
 
       data = LogStash::Json.load(response.body)
 
