@@ -143,6 +143,31 @@ end
 
 describe LogStash::Filters::KubernetesMetadata do
 
+  describe "Get pod metadata with non standard source" do
+    let(:config) do <<-CONFIG
+      filter {
+        kubernetes_metadata {
+          source => "source"
+          api => "http://127.0.0.1:#{PORT}"
+        }
+      }
+    CONFIG
+    end
+
+    sample("source" => "/var/log/containers/kube-testwithsinglelogformat-abcde_default_myappname-47d3a3bfb112dbd2fd6e255e1e3d9eb91a10b62342e620e4917e2f5e24398507.log") do
+      kubernetes = subject.get('kubernetes')
+
+      expect(kubernetes['pod']).to eq('kube-testwithsinglelogformat-abcde')
+      expect(kubernetes['namespace']).to eq('default')
+      expect(kubernetes['container_name']).to eq('myappname')
+      expect(kubernetes['replication_controller']).to eq('kube-testwithsinglelogformat')
+      expect(kubernetes['annotations']['log-format']).to be_kind_of(String)
+      expect(kubernetes['log_format_stdout']).to eq('single_format')
+      expect(kubernetes['log_format_stderr']).to eq('single_format')
+      expect(kubernetes['labels']['app']).to eq('myappname')
+    end
+
+  end
   describe "Get pod metadata with single log-format" do
     let(:config) do <<-CONFIG
       filter {

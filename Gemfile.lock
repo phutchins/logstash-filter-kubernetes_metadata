@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    logstash-filter-kubernetes_metadata (0.1.0)
+    logstash-filter-kubernetes_metadata (1.0.0)
       logstash-core-plugin-api (~> 2.0)
       lru_redux (~> 1.1, >= 1.1.0)
       rest-client (~> 1.8, >= 1.8.0)
