@@ -40,14 +40,20 @@ class LogStash::Filters::KubernetesMetadata < LogStash::Filters::Base
   public
   def filter(event)
     @logger.debug("event is: #{event}")
-    path = event.get("path")
-    return unless source
+    path = event.get(@source)
+
+    @logger.debug("@source is: #{@source}")
+    @logger.debug("path is: #{path}")
+
+    # Ensure that the path parameter has been defined so that we can find the required metadata
+    if (path.nil? || path.empty?)
+      event.tag("_kubeparsefailure")
+      return
+    end
 
     @logger.debug("Log entry has source field, beginning processing for Kubernetes")
 
     config = {}
-
-    @logger.debug("path is: " + path.to_s)
 
     unless config = lookup_cache[path]
       kubernetes = get_file_info(path)
@@ -139,9 +145,9 @@ class LogStash::Filters::KubernetesMetadata < LogStash::Filters::Base
 
       url = [ @api, 'api/v1/namespaces', namespace, 'pods', pod ].join("/")
 
-      rest_opts = [
-        url
-      ]
+      rest_opts = {
+        verify_ssl: false
+      }
 
       if @auth
         if @auth['basic']
@@ -150,7 +156,7 @@ class LogStash::Filters::KubernetesMetadata < LogStash::Filters::Base
           basic_user = @auth['basic']['user']
           basic_pass = @auth['basic']['pass']
 
-          rest_opts.push(basic_user, basic_pass)
+          rest_opts.merge!( user: basic_user, password: basic_pass )
         end
 
         if @auth['bearer']
@@ -158,14 +164,14 @@ class LogStash::Filters::KubernetesMetadata < LogStash::Filters::Base
 
           bearer_key = @auth['bearer']['key']
 
-          rest_opts.push({ :Authorization => "Bearer #{bearer_key}" })
+          rest_opts.merge!( Authorization: "Bearer #{bearer_key}" )
         end
       end
 
       @logger.debug("rest_opts: #{rest_opts}")
 
       begin
-        response = RestClient::Resource.new(*rest_opts, :verify_ssl => false).get
+        response = RestClient::Resource.new(url, rest_opts).get
       rescue RestClient::ResourceNotFound
         @logger.warn("Kubernetes returned an error while querying the API")
       rescue Exception => e
@@ -174,11 +180,8 @@ class LogStash::Filters::KubernetesMetadata < LogStash::Filters::Base
 
       if response && response.code != 200
         @logger.warn("Non 200 response code returned: #{response.code}")
-      else
         return nil
       end
-
-      @logger.debug("RESPONSE IS: #{response}")
 
       data = LogStash::Json.load(response.body)
 
