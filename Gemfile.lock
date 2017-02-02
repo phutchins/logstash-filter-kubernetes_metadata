@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    logstash-filter-kubernetes_metadata (1.0.0)
+    logstash-filter-kubernetes_metadata (1.0.1)
       logstash-core-plugin-api (~> 2.0)
       lru_redux (~> 1.1, >= 1.1.0)
       rest-client (~> 1.8, >= 1.8.0)
@@ -26,7 +26,7 @@ GEM
       domain_name (~> 0.5)
     i18n (0.6.9)
     insist (1.0.0)
-    jar-dependencies (0.3.9)
+    jar-dependencies (0.3.10)
     jrjackson (0.4.2-java)
     jrmonitor (0.4.2)
     jruby-openssl (0.9.16-java)
@@ -59,7 +59,7 @@ GEM
     logstash-core-plugin-api (2.1.22-java)
       logstash-core (= 5.1.1.1)
     logstash-core-queue-jruby (5.1.1.1-java)
-    logstash-devutils (1.2.1-java)
+    logstash-devutils (1.3.0-java)
       fivemat
       gem_publisher
       insist (= 1.0.0)
@@ -110,7 +110,7 @@ GEM
       ruby-maven-libs (~> 3.3.9)
     ruby-maven-libs (3.3.9)
     rubyzip (1.1.7)
-    sinatra (1.4.7)
+    sinatra (1.4.8)
       rack (~> 1.5)
       rack-protection (~> 1.4)
       tilt (>= 1.3, < 3)
@@ -119,7 +119,7 @@ GEM
       ffi
     stud (0.0.22)
     thread_safe (0.3.5-java)
-    tilt (2.0.5)
+    tilt (2.0.6)
     treetop (1.4.15)
       polyglot
       polyglot (>= 0.3.1)

@@ -6,6 +6,10 @@ require "rest-client"
 require "uri"
 require "logstash/json"
 
+# Process the metadata include in the file names of kubernetes log files
+# and inject that data into the log event.
+#
+
 class LogStash::Filters::KubernetesMetadata < LogStash::Filters::Base
 
   attr_accessor :lookup_cache
@@ -18,10 +22,25 @@ class LogStash::Filters::KubernetesMetadata < LogStash::Filters::Base
   # The target field name to write event kubernetes metadata.
   config :target, :validate => :string, :default => "kubernetes"
 
-  # Auth for hitting the Kubernetes API
+  # Auth for hitting the Kubernetes API. This can be either basic auth or
+  # Bearer auth. It should be formated like the following
+  # auth => {
+  #   basic => {
+  #     user => "admin"
+  #     pass => "mysuperawesomepassword"
+  #   }
+  # }
+  #
+  # or
+  #
+  # auth => {
+  #   bearer => {
+  #     key => "bearerkeygoeshere"
+  #   }
+  # }
   config :auth, :validate => :hash, :default => {}
 
-  # Kubernetes API
+  # Kubernetes API URL
   config :api, :validate => :string, :default => "http://127.0.0.1:8001"
 
   # default log format
