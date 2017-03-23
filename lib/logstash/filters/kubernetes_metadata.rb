@@ -174,6 +174,8 @@ class LogStash::Filters::KubernetesMetadata < LogStash::Filters::Base
         verify_ssl: false
       }
 
+      auth_opts = {}
+
       if @auth
         if @auth['basic']
           @logger.debug("Found basic auth for Kubernetes API")
@@ -181,7 +183,7 @@ class LogStash::Filters::KubernetesMetadata < LogStash::Filters::Base
           basic_user = @auth['basic']['user']
           basic_pass = @auth['basic']['pass']
 
-          rest_opts.merge!( user: basic_user, password: basic_pass )
+          auth_opts.merge!( user: basic_user, password: basic_pass )
         end
 
         if @auth['bearer']
@@ -189,17 +191,18 @@ class LogStash::Filters::KubernetesMetadata < LogStash::Filters::Base
 
           bearer_key = @auth['bearer']['key']
 
-          rest_opts.merge!( Authorization: "Bearer #{bearer_key}" )
+          auth_opts.merge!( Authorization: "Bearer #{bearer_key}" )
         end
       end
 
       @logger.debug("rest_opts: #{rest_opts}")
+      @logger.debug("auth_opts: #{auth_opts}")
 
       begin
-        response = RestClient::Resource.new(url, rest_opts).get
+        response = RestClient::Resource.new(url, rest_opts).get(auth_opts)
       rescue RestClient::ResourceNotFound
         @logger.warn("Kubernetes returned an error while querying the API")
-        @logger.warn("url: #{url}, rest_opts: #{rest_opts}")
+        @logger.warn("url: #{url}, rest_opts: #{rest_opts}, auth_opts: #{auth_opts}")
       rescue Exception => e
         @logger.warn("Error while querying the API: #{e.to_s}")
       end
